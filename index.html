@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Countdowns</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@1.14.0/dist/full.css" rel="stylesheet">
+  <style>
+    .countdown > span {
+      --value: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="flex flex-col justify-center items-center h-screen">
+    <div id="countdowns" class="space-y-12"></div>
+  </div>
+
+  <script>
+    function createCountdown(targetDate, heading, text) {
+      const countdownContainer = document.createElement('div');
+      countdownContainer.classList.add('flex', 'flex-col', 'justify-center', 'items-center');
+
+      const headingElement = document.createElement('h2');
+      headingElement.classList.add('text-2xl', 'font-bold', 'mb-4');
+      headingElement.textContent = heading;
+
+      const timerGrid = document.createElement('div');
+      timerGrid.classList.add('grid', 'grid-flow-col', 'gap-5', 'text-center', 'auto-cols-max', 'mb-4');
+      timerGrid.innerHTML = `
+        <div class="flex flex-col">
+          <span class="countdown font-mono text-5xl">
+            <span id="months-${heading}" style="--value:0;"></span>
+          </span>
+          months
+        </div>
+        <div class="flex flex-col">
+          <span class="countdown font-mono text-5xl">
+            <span id="days-${heading}" style="--value:0;"></span>
+          </span>
+          days
+        </div> 
+        <div class="flex flex-col">
+          <span class="countdown font-mono text-5xl">
+            <span id="hours-${heading}" style="--value:0;"></span>
+          </span>
+          hours
+        </div> 
+        <div class="flex flex-col">
+          <span class="countdown font-mono text-5xl">
+            <span id="minutes-${heading}" style="--value:0;"></span>
+          </span>
+          min
+        </div> 
+        <div class="flex flex-col">
+          <span class="countdown font-mono text-5xl">
+            <span id="seconds-${heading}" style="--value:0;"></span>
+          </span>
+          sec
+        </div>
+      `;
+
+      const textElement = document.createElement('p');
+      textElement.classList.add('text-center', 'text-lg');
+      textElement.textContent = text;
+
+      countdownContainer.appendChild(headingElement);
+      countdownContainer.appendChild(timerGrid);
+      countdownContainer.appendChild(textElement);
+
+      document.getElementById('countdowns').appendChild(countdownContainer);
+
+      // Start the countdown
+      startCountdown(targetDate, heading);
+    }
+
+    function startCountdown(targetDate, heading) {
+      const countDownDate = new Date(targetDate).getTime();
+
+      const x = setInterval(function() {
+        const now = new Date().getTime();
+        const distance = countDownDate - now;
+
+        const months = Math.floor(distance / (1000 * 60 * 60 * 24 * 30.44));
+        const days = Math.floor((distance % (1000 * 60 * 60 * 24 * 30.44)) / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        document.getElementById(`months-${heading}`).style.setProperty('--value', months);
+        document.getElementById(`days-${heading}`).style.setProperty('--value', days);
+        document.getElementById(`hours-${heading}`).style.setProperty('--value', hours);
+        document.getElementById(`minutes-${heading}`).style.setProperty('--value', minutes);
+        document.getElementById(`seconds-${heading}`).style.setProperty('--value', seconds);
+
+        if (distance < 0) {
+          clearInterval(x);
+          document.getElementById(`months-${heading}`).style.setProperty('--value', 0);
+          document.getElementById(`days-${heading}`).style.setProperty('--value', 0);
+          document.getElementById(`hours-${heading}`).style.setProperty('--value', 0);
+          document.getElementById(`minutes-${heading}`).style.setProperty('--value', 0);
+          document.getElementById(`seconds-${heading}`).style.setProperty('--value', 0);
+        }
+      }, 1000);
+    }
+
+    // Example usage
+    createCountdown("June 2, 2024 22:00:00", "Caos exam");
+    createCountdown("June 10, 2024 22:00:00", "SPO");
+    createCountdown("June 17, 2024 22:00:00", "SS");
+    createCountdown("June 24, 2024 22:00:00", "Group");
+  </script>
+</body>
+</html>
+
