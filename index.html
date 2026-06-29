@@ -1,127 +1,572 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Countdowns</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/daisyui@1.14.0/dist/full.css" rel="stylesheet">
+  <meta name="description" content="A simple, frontend-only countdown tracker. Add your own deadlines, exams, and events — saved right in your browser." />
+  <link rel="icon" type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%8F%B3%3C/text%3E%3C/svg%3E" />
   <style>
-    .countdown > span {
-      --value: 0;
+    :root {
+      --bg: #0f1115;
+      --bg-soft: #171a21;
+      --card: #1c2029;
+      --card-hover: #222733;
+      --border: #2a2f3a;
+      --text: #e7e9ee;
+      --text-dim: #9aa3b2;
+      --text-faint: #6b7382;
+      --accent: #6c8cff;
+      --accent-soft: rgba(108, 140, 255, 0.14);
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --soon: #fb923c;
+      --urgent: #f87171;
+      --done: #8b93a3;
     }
+    [data-theme="light"] {
+      --bg: #f4f6fb;
+      --bg-soft: #ffffff;
+      --card: #ffffff;
+      --card-hover: #f7f9ff;
+      --border: #e3e7f0;
+      --text: #1a1f2b;
+      --text-dim: #5a6475;
+      --text-faint: #8a93a3;
+      --accent: #3b5bdb;
+      --accent-soft: rgba(59, 91, 219, 0.1);
+      --shadow: 0 10px 30px rgba(40, 50, 90, 0.1);
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    a { color: var(--accent); }
+
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 80px; }
+
+    header.top {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 16px; flex-wrap: wrap; margin-bottom: 8px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand .logo { font-size: 30px; line-height: 1; }
+    .brand h1 { font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+    .brand p { margin: 2px 0 0; color: var(--text-dim); font-size: 13px; }
+
+    .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    button, .btn {
+      font: inherit; cursor: pointer; border: 1px solid var(--border);
+      background: var(--card); color: var(--text);
+      padding: 9px 14px; border-radius: 10px; transition: background .15s, border-color .15s, transform .05s;
+      display: inline-flex; align-items: center; gap: 7px; white-space: nowrap;
+    }
+    button:hover, .btn:hover { background: var(--card-hover); border-color: var(--accent); }
+    button:active { transform: translateY(1px); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+    .btn-primary:hover { filter: brightness(1.07); background: var(--accent); }
+    .btn-ghost { background: transparent; }
+    .icon-btn { padding: 9px 11px; }
+
+    .controls {
+      display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+      margin: 22px 0 18px;
+    }
+    .search {
+      flex: 1 1 220px; min-width: 180px; display: flex; align-items: center; gap: 8px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 0 12px;
+    }
+    .search input { border: none; background: transparent; color: var(--text); padding: 10px 0; width: 100%; font: inherit; outline: none; }
+    select.sort { background: var(--card); color: var(--text); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; font: inherit; }
+
+    /* Grid of countdown cards */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 18px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+      transition: border-color .15s, transform .12s;
+    }
+    .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .card.accent-bar::before {
+      content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--bar, var(--accent));
+    }
+    .card.is-done { opacity: .62; }
+
+    .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
+    .card-title { font-size: 17px; font-weight: 700; margin: 0; letter-spacing: -0.01em; word-break: break-word; }
+    .card-cat {
+      font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+      color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 999px; display: inline-block; margin-bottom: 8px;
+    }
+    .card-date { color: var(--text-dim); font-size: 13px; margin: 0 0 12px; }
+    .card-note { color: var(--text-faint); font-size: 13px; margin: 10px 0 0; word-break: break-word; }
+
+    .timer { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+    .timer .unit { background: var(--bg-soft); border: 1px solid var(--border); border-radius: 10px; padding: 8px 4px; }
+    .timer .num { font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 700; line-height: 1.1; }
+    .timer .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--text-faint); margin-top: 2px; }
+
+    .relative { font-size: 13px; font-weight: 600; margin: 12px 0 2px; color: var(--bar, var(--accent)); }
+
+    .card-actions { display: flex; gap: 6px; margin-top: 14px; }
+    .card-actions button { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+
+    .empty {
+      text-align: center; color: var(--text-dim); padding: 60px 20px; border: 1.5px dashed var(--border);
+      border-radius: 16px; background: var(--card);
+    }
+    .empty .big { font-size: 40px; margin-bottom: 10px; }
+
+    .section-label { color: var(--text-faint); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; margin: 30px 0 12px; }
+
+    /* Modal */
+    .modal-backdrop {
+      position: fixed; inset: 0; background: rgba(5, 7, 12, 0.6); backdrop-filter: blur(3px);
+      display: none; align-items: center; justify-content: center; padding: 20px; z-index: 50;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal {
+      background: var(--bg-soft); border: 1px solid var(--border); border-radius: 18px;
+      width: 100%; max-width: 440px; padding: 24px; box-shadow: var(--shadow);
+    }
+    .modal h2 { margin: 0 0 16px; font-size: 19px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 13px; color: var(--text-dim); margin-bottom: 6px; font-weight: 600; }
+    .field input, .field textarea {
+      width: 100%; background: var(--card); border: 1px solid var(--border); color: var(--text);
+      border-radius: 10px; padding: 10px 12px; font: inherit; outline: none;
+    }
+    .field input:focus, .field textarea:focus { border-color: var(--accent); }
+    .field textarea { resize: vertical; min-height: 58px; }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+
+    .hint { color: var(--text-faint); font-size: 12px; margin-top: 5px; }
+    footer { margin-top: 50px; text-align: center; color: var(--text-faint); font-size: 12px; }
+    footer a { color: var(--text-dim); }
+    .visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   </style>
 </head>
 <body>
-  <p>
-  Visit
-  <a href="https://github.com/DeeKahy/Countdown/">the Github page</a>.
-</p>
-  <div class="flex flex-col justify-center items-center h-screen">
-    <div id="countdowns" class="space-y-12"></div>
+  <div class="wrap">
+    <header class="top">
+      <div class="brand">
+        <span class="logo">⏳</span>
+        <div>
+          <h1>Countdowns</h1>
+          <p>Your deadlines, exams &amp; events — all in one place.</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button id="addBtn" class="btn-primary" title="Add a countdown">＋ Add countdown</button>
+        <button id="themeBtn" class="icon-btn btn-ghost" title="Toggle light / dark" aria-label="Toggle theme">🌙</button>
+        <button id="menuBtn" class="icon-btn btn-ghost" title="Import / export" aria-label="More options">⋯</button>
+      </div>
+    </header>
+
+    <div class="controls">
+      <div class="search">
+        <span aria-hidden="true">🔎</span>
+        <input id="search" type="search" placeholder="Search countdowns…" autocomplete="off" />
+      </div>
+      <select id="sort" class="sort" title="Sort order">
+        <option value="soonest">Soonest first</option>
+        <option value="latest">Furthest first</option>
+        <option value="name">Name (A–Z)</option>
+        <option value="created">Recently added</option>
+      </select>
+    </div>
+
+    <div id="upcoming" class="grid"></div>
+    <div id="emptyState"></div>
+
+    <div id="pastWrap" style="display:none">
+      <div class="section-label">Past</div>
+      <div id="past" class="grid"></div>
+    </div>
+
+    <footer>
+      Frontend-only &amp; saved in your browser. No account, no server.
+      &nbsp;·&nbsp; <a href="https://github.com/DeeKahy/Countdown/" target="_blank" rel="noopener">GitHub</a>
+    </footer>
+  </div>
+
+  <!-- Add / edit modal -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <h2 id="modalTitle">Add countdown</h2>
+      <form id="form">
+        <input type="hidden" id="editId" />
+        <div class="field">
+          <label for="title">Title</label>
+          <input id="title" type="text" required placeholder="e.g. Software Innovation exam" />
+        </div>
+        <div class="field">
+          <label for="when">Date &amp; time</label>
+          <input id="when" type="datetime-local" required />
+          <div class="hint">Pick from the calendar — no more typing dates by hand.</div>
+        </div>
+        <div class="field">
+          <label for="category">Category <span style="font-weight:400">(optional)</span></label>
+          <input id="category" type="text" placeholder="e.g. Exam, Assignment, Personal" />
+        </div>
+        <div class="field">
+          <label for="note">Note <span style="font-weight:400">(optional)</span></label>
+          <textarea id="note" placeholder="Room, topic, link, anything…"></textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="cancelBtn" class="btn-ghost">Cancel</button>
+          <button type="submit" class="btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Import / export modal -->
+  <div class="modal-backdrop" id="menuModal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="menuTitle">
+      <h2 id="menuTitle">Import / export</h2>
+      <p style="color:var(--text-dim);font-size:13px;margin-top:0">
+        Your countdowns live in this browser only. Export to back them up or move them to another device.
+      </p>
+      <div class="modal-actions" style="justify-content:flex-start;flex-wrap:wrap">
+        <button id="exportBtn">⬇ Export JSON</button>
+        <button id="importBtn">⬆ Import JSON</button>
+        <button id="resetBtn" class="btn-ghost" style="margin-left:auto">↺ Reset to defaults</button>
+      </div>
+      <input type="file" id="importFile" accept="application/json,.json" class="visually-hidden" />
+      <div class="modal-actions">
+        <button type="button" id="menuClose" class="btn-ghost">Close</button>
+      </div>
+    </div>
   </div>
 
   <script>
-    function createCountdown(targetDate, heading, text) {
-      const countdownContainer = document.createElement('div');
-      countdownContainer.classList.add('flex', 'flex-col', 'justify-center', 'items-center');
+    (function () {
+      "use strict";
+      var STORE_KEY = "countdowns.v1";
+      var THEME_KEY = "countdowns.theme";
 
-      const headingElement = document.createElement('h2');
-      headingElement.classList.add('text-2xl', 'font-bold', 'mb-4');
-      headingElement.textContent = heading;
+      // Default countdowns (used on first visit / after reset).
+      var DEFAULTS = [
+        { title: "Software Innovation", at: "2026-06-02T19:00", category: "Exam", note: "" },
+        { title: "Group Exam",          at: "2026-06-18T19:00", category: "Exam", note: "" },
+        { title: "C++",                 at: "2026-06-14T19:00", category: "Exam", note: "" },
+        { title: "MHCI (Henning)",      at: "2026-06-21T19:00", category: "Exam", note: "" },
+        { title: "MDLS (location services)", at: "2026-06-24T19:00", category: "Exam", note: "" }
+      ];
 
-      const timerGrid = document.createElement('div');
-      timerGrid.classList.add('grid', 'grid-flow-col', 'gap-5', 'text-center', 'auto-cols-max', 'mb-4');
-      timerGrid.innerHTML = `
-        <div class="flex flex-col">
-          <span class="countdown font-mono text-5xl">
-            <span id="months-${heading}" style="--value:0;"></span>
-          </span>
-          months
-        </div>
-        <div class="flex flex-col">
-          <span class="countdown font-mono text-5xl">
-            <span id="days-${heading}" style="--value:0;"></span>
-          </span>
-          days
-        </div> 
-        <div class="flex flex-col">
-          <span class="countdown font-mono text-5xl">
-            <span id="hours-${heading}" style="--value:0;"></span>
-          </span>
-          hours
-        </div> 
-        <div class="flex flex-col">
-          <span class="countdown font-mono text-5xl">
-            <span id="minutes-${heading}" style="--value:0;"></span>
-          </span>
-          min
-        </div> 
-        <div class="flex flex-col">
-          <span class="countdown font-mono text-5xl">
-            <span id="seconds-${heading}" style="--value:0;"></span>
-          </span>
-          sec
-        </div>
-      `;
+      var uid = function () { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); };
 
-      const textElement = document.createElement('p');
-      textElement.classList.add('text-center', 'text-lg');
-      textElement.textContent = text;
+      function load() {
+        try {
+          var raw = localStorage.getItem(STORE_KEY);
+          if (raw === null) {
+            var seeded = DEFAULTS.map(function (d) { return Object.assign({ id: uid(), created: Date.now() }, d); });
+            save(seeded);
+            return seeded;
+          }
+          var arr = JSON.parse(raw);
+          return Array.isArray(arr) ? arr : [];
+        } catch (e) { return []; }
+      }
+      function save(list) {
+        try { localStorage.setItem(STORE_KEY, JSON.stringify(list)); } catch (e) {}
+      }
 
-      countdownContainer.appendChild(headingElement);
-      countdownContainer.appendChild(timerGrid);
-      countdownContainer.appendChild(textElement);
+      var items = load();
 
-      document.getElementById('countdowns').appendChild(countdownContainer);
+      // ---- date helpers ----
+      var WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      function pad(n) { return n < 10 ? "0" + n : "" + n; }
+      function fmtDate(iso) {
+        var d = new Date(iso);
+        if (isNaN(d)) return "Invalid date";
+        return WEEKDAYS[d.getDay()] + ", " + d.getDate() + " " + MONTHS[d.getMonth()] + " " +
+               d.getFullYear() + " · " + pad(d.getHours()) + ":" + pad(d.getMinutes());
+      }
+      function relative(ms) {
+        var past = ms < 0; var s = Math.abs(ms) / 1000;
+        var d = Math.floor(s / 86400); var h = Math.floor((s % 86400) / 3600); var m = Math.floor((s % 3600) / 60);
+        var parts;
+        if (d > 0) parts = d + (d === 1 ? " day" : " days") + (h ? ", " + h + "h" : "");
+        else if (h > 0) parts = h + "h " + m + "m";
+        else parts = m + "m";
+        return past ? parts + " ago" : "in " + parts;
+      }
+      // urgency color by time remaining
+      function urgencyVar(ms) {
+        if (ms < 0) return "var(--done)";
+        var days = ms / 86400000;
+        if (days < 1) return "var(--urgent)";
+        if (days < 3) return "var(--soon)";
+        if (days < 7) return "var(--warn)";
+        return "var(--ok)";
+      }
 
-      // Start the countdown
-      startCountdown(targetDate, heading);
-    }
+      // ---- rendering ----
+      var upcomingEl = document.getElementById("upcoming");
+      var pastEl = document.getElementById("past");
+      var pastWrap = document.getElementById("pastWrap");
+      var emptyEl = document.getElementById("emptyState");
+      var searchEl = document.getElementById("search");
+      var sortEl = document.getElementById("sort");
 
-    function startCountdown(targetDate, heading) {
-      const countDownDate = new Date(targetDate).getTime();
+      function escapeHtml(s) {
+        return String(s || "").replace(/[&<>"']/g, function (c) {
+          return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+        });
+      }
 
-      const x = setInterval(function() {
-        const now = new Date().getTime();
-        const distance = countDownDate - now;
+      function unitHtml(num, label) {
+        return '<div class="unit"><div class="num">' + num + '</div><div class="lbl">' + label + '</div></div>';
+      }
 
-        const months = Math.floor(distance / (1000 * 60 * 60 * 24 * 30.44));
-        const days = Math.floor((distance % (1000 * 60 * 60 * 24 * 30.44)) / (1000 * 60 * 60 * 24));
-        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+      function cardHtml(it) {
+        var now = Date.now();
+        var target = new Date(it.at).getTime();
+        var dist = target - now;
+        var done = dist < 0;
+        var bar = urgencyVar(dist);
+        var s = Math.abs(dist) / 1000;
+        var days = Math.floor(s / 86400);
+        var hours = Math.floor((s % 86400) / 3600);
+        var mins = Math.floor((s % 3600) / 60);
+        var secs = Math.floor(s % 60);
 
-        document.getElementById(`months-${heading}`).style.setProperty('--value', months);
-        document.getElementById(`days-${heading}`).style.setProperty('--value', days);
-        document.getElementById(`hours-${heading}`).style.setProperty('--value', hours);
-        document.getElementById(`minutes-${heading}`).style.setProperty('--value', minutes);
-        document.getElementById(`seconds-${heading}`).style.setProperty('--value', seconds);
+        var cat = it.category ? '<span class="card-cat">' + escapeHtml(it.category) + "</span>" : "";
+        var note = it.note ? '<p class="card-note">' + escapeHtml(it.note) + "</p>" : "";
+        var relText = done ? "Passed " + relative(dist) : relative(dist);
 
-        if (distance < 0) {
-          clearInterval(x);
-          document.getElementById(`months-${heading}`).style.setProperty('--value', 0);
-          document.getElementById(`days-${heading}`).style.setProperty('--value', 0);
-          document.getElementById(`hours-${heading}`).style.setProperty('--value', 0);
-          document.getElementById(`minutes-${heading}`).style.setProperty('--value', 0);
-          document.getElementById(`seconds-${heading}`).style.setProperty('--value', 0);
+        return '' +
+          '<div class="card accent-bar ' + (done ? "is-done" : "") + '" style="--bar:' + bar + '" data-id="' + it.id + '">' +
+            '<div class="card-head">' +
+              '<h3 class="card-title">' + escapeHtml(it.title) + "</h3>" +
+            "</div>" +
+            cat +
+            '<p class="card-date">📅 ' + fmtDate(it.at) + "</p>" +
+            '<div class="timer">' +
+              unitHtml(days, days === 1 ? "day" : "days") +
+              unitHtml(pad(hours), "hrs") +
+              unitHtml(pad(mins), "min") +
+              unitHtml(pad(secs), "sec") +
+            "</div>" +
+            '<div class="relative" style="color:' + bar + '">' + (done ? "✓ " : "⏱ ") + relText + "</div>" +
+            note +
+            '<div class="card-actions">' +
+              '<button class="editBtn btn-ghost" data-id="' + it.id + '">Edit</button>' +
+              '<button class="delBtn btn-ghost" data-id="' + it.id + '">Delete</button>' +
+            "</div>" +
+          "</div>";
+      }
+
+      function currentView() {
+        var q = (searchEl.value || "").trim().toLowerCase();
+        var list = items.filter(function (it) {
+          if (!q) return true;
+          return (it.title + " " + (it.category || "") + " " + (it.note || "")).toLowerCase().indexOf(q) !== -1;
+        });
+        return list;
+      }
+
+      function sortList(list, mode, now) {
+        var byTime = function (a, b) { return new Date(a.at) - new Date(b.at); };
+        if (mode === "latest") return list.sort(function (a, b) { return new Date(b.at) - new Date(a.at); });
+        if (mode === "name") return list.sort(function (a, b) { return a.title.localeCompare(b.title); });
+        if (mode === "created") return list.sort(function (a, b) { return (b.created || 0) - (a.created || 0); });
+        return list.sort(byTime); // soonest
+      }
+
+      function render() {
+        var now = Date.now();
+        var list = currentView();
+        var upcoming = list.filter(function (it) { return new Date(it.at).getTime() >= now; });
+        var past = list.filter(function (it) { return new Date(it.at).getTime() < now; });
+
+        var mode = sortEl.value;
+        sortList(upcoming, mode, now);
+        // past always newest-passed first
+        past.sort(function (a, b) { return new Date(b.at) - new Date(a.at); });
+
+        upcomingEl.innerHTML = upcoming.map(cardHtml).join("");
+        pastEl.innerHTML = past.map(cardHtml).join("");
+        pastWrap.style.display = past.length ? "block" : "none";
+
+        if (!list.length) {
+          emptyEl.innerHTML = items.length
+            ? '<div class="empty"><div class="big">🔎</div>No countdowns match your search.</div>'
+            : '<div class="empty"><div class="big">⏳</div><strong>No countdowns yet.</strong><br>Click “Add countdown” to create your first one.</div>';
+        } else {
+          emptyEl.innerHTML = "";
         }
-      }, 1000);
-    }
+      }
 
+      // live tick — re-render the numbers every second
+      function tick() {
+        var nodes = document.querySelectorAll(".card");
+        var now = Date.now();
+        nodes.forEach(function (node) {
+          var id = node.getAttribute("data-id");
+          var it = items.find(function (x) { return x.id === id; });
+          if (!it) return;
+          var dist = new Date(it.at).getTime() - now;
+          var done = dist < 0;
+          var s = Math.abs(dist) / 1000;
+          var nums = node.querySelectorAll(".timer .num");
+          if (nums.length === 4) {
+            var days = Math.floor(s / 86400);
+            nums[0].textContent = days;
+            nums[1].textContent = pad(Math.floor((s % 86400) / 3600));
+            nums[2].textContent = pad(Math.floor((s % 3600) / 60));
+            nums[3].textContent = pad(Math.floor(s % 60));
+            node.querySelectorAll(".timer .lbl")[0].textContent = days === 1 ? "day" : "days";
+          }
+          var rel = node.querySelector(".relative");
+          if (rel) rel.textContent = (done ? "✓ Passed " : "⏱ ") + relative(dist);
+        });
+      }
 
+      // re-sort/move cards between upcoming & past once a minute (cheap + avoids full re-render every sec)
+      setInterval(tick, 1000);
+      setInterval(render, 30000);
 
-    // Example usage
-createCountdown("June 2, 2026 19:00:00", "Software innovation");
-createCountdown("June 14, 2026 19:00:00", "C++");
-createCountdown("June 21, 2026 19:00:00", "MHCI (Henning)");
-createCountdown("June 24, 2026 19:00:00", "MDLS (location services)");
-createCountdown("June 18, 2026 19:00:00", "Group Exam");
+      // ---- modal: add / edit ----
+      var modal = document.getElementById("modal");
+      var form = document.getElementById("form");
+      var titleIn = document.getElementById("title");
+      var whenIn = document.getElementById("when");
+      var catIn = document.getElementById("category");
+      var noteIn = document.getElementById("note");
+      var editIdIn = document.getElementById("editId");
+      var modalTitle = document.getElementById("modalTitle");
 
+      function openModal(it) {
+        if (it) {
+          modalTitle.textContent = "Edit countdown";
+          editIdIn.value = it.id;
+          titleIn.value = it.title; whenIn.value = it.at;
+          catIn.value = it.category || ""; noteIn.value = it.note || "";
+        } else {
+          modalTitle.textContent = "Add countdown";
+          form.reset(); editIdIn.value = "";
+        }
+        modal.classList.add("open");
+        setTimeout(function () { titleIn.focus(); }, 30);
+      }
+      function closeModal() { modal.classList.remove("open"); }
 
+      document.getElementById("addBtn").addEventListener("click", function () { openModal(null); });
+      document.getElementById("cancelBtn").addEventListener("click", closeModal);
+      modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
 
+      form.addEventListener("submit", function (e) {
+        e.preventDefault();
+        var data = {
+          title: titleIn.value.trim(),
+          at: whenIn.value,
+          category: catIn.value.trim(),
+          note: noteIn.value.trim()
+        };
+        if (!data.title || !data.at) return;
+        var id = editIdIn.value;
+        if (id) {
+          items = items.map(function (x) { return x.id === id ? Object.assign({}, x, data) : x; });
+        } else {
+          items.push(Object.assign({ id: uid(), created: Date.now() }, data));
+        }
+        save(items); closeModal(); render();
+      });
 
+      // ---- card actions (event delegation) ----
+      document.body.addEventListener("click", function (e) {
+        var edit = e.target.closest(".editBtn");
+        var del = e.target.closest(".delBtn");
+        if (edit) {
+          var it = items.find(function (x) { return x.id === edit.getAttribute("data-id"); });
+          if (it) openModal(it);
+        } else if (del) {
+          var did = del.getAttribute("data-id");
+          var item = items.find(function (x) { return x.id === did; });
+          if (item && confirm('Delete "' + item.title + '"?')) {
+            items = items.filter(function (x) { return x.id !== did; });
+            save(items); render();
+          }
+        }
+      });
+
+      searchEl.addEventListener("input", render);
+      sortEl.addEventListener("change", render);
+
+      // ---- theme ----
+      var themeBtn = document.getElementById("themeBtn");
+      function applyTheme(t) {
+        document.documentElement.setAttribute("data-theme", t);
+        themeBtn.textContent = t === "dark" ? "🌙" : "☀️";
+      }
+      var savedTheme = localStorage.getItem(THEME_KEY) ||
+        (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+      applyTheme(savedTheme);
+      themeBtn.addEventListener("click", function () {
+        var next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+        localStorage.setItem(THEME_KEY, next); applyTheme(next);
+      });
+
+      // ---- import / export menu ----
+      var menuModal = document.getElementById("menuModal");
+      document.getElementById("menuBtn").addEventListener("click", function () { menuModal.classList.add("open"); });
+      document.getElementById("menuClose").addEventListener("click", function () { menuModal.classList.remove("open"); });
+      menuModal.addEventListener("click", function (e) { if (e.target === menuModal) menuModal.classList.remove("open"); });
+
+      document.getElementById("exportBtn").addEventListener("click", function () {
+        var blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
+        var a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "countdowns.json";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      });
+      var importFile = document.getElementById("importFile");
+      document.getElementById("importBtn").addEventListener("click", function () { importFile.click(); });
+      importFile.addEventListener("change", function () {
+        var file = importFile.files[0]; if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+          try {
+            var arr = JSON.parse(reader.result);
+            if (!Array.isArray(arr)) throw new Error("Not a list");
+            items = arr.map(function (d) {
+              return { id: d.id || uid(), title: d.title || "Untitled", at: d.at || "",
+                       category: d.category || "", note: d.note || "", created: d.created || Date.now() };
+            });
+            save(items); render(); menuModal.classList.remove("open");
+          } catch (err) { alert("Could not import that file — make sure it's a countdowns export."); }
+          importFile.value = "";
+        };
+        reader.readAsText(file);
+      });
+      document.getElementById("resetBtn").addEventListener("click", function () {
+        if (!confirm("Reset to the default countdowns? This replaces your current list.")) return;
+        items = DEFAULTS.map(function (d) { return Object.assign({ id: uid(), created: Date.now() }, d); });
+        save(items); render(); menuModal.classList.remove("open");
+      });
+
+      // close modals on Escape
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") { closeModal(); menuModal.classList.remove("open"); }
+      });
+
+      render();
+    })();
   </script>
 </body>
 </html>
-
