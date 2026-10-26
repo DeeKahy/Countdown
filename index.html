@@ -17,42 +17,57 @@
 <body>
 <h1>Countdown</h1>
 <table id="list"></table>
+<p id="empty" hidden>Nothing coming up.</p>
 
 <script>
-// Edit this list. Dates are YYYY-MM-DD. Past dates are hidden.
+// Edit this list. Give a time with a timezone ("Z" = UTC, or e.g. +01:00);
+// a bare date like "2026-12-24" means midnight wherever you are. Past events are hidden.
 const EVENTS = [
-  ["Christmas Eve", "2026-12-24"],
-  ["New Year",      "2027-01-01"],
-  ["PoE 3.30 league",  "2026-11-13"],
-  ["PoE 2 1.0 release", "2026-12-11"],
+  ["Christmas Eve",     "2026-12-24"],
+  ["New Year",          "2027-01-01"],
+  ["PoE 3.30 league",   "2026-11-13T21:00Z"],  // 1 PM PST
+  ["PoE 2 1.0 release", "2026-12-11T21:00Z"],  // expected 1 PM PST, not confirmed
 ];
 
-// Count whole calendar days, ignoring time of day and DST.
-const now = new Date();
-const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+const parse = s => /^\d{4}-\d{2}-\d{2}$/.test(s) ? new Date(s + "T00:00") : new Date(s);
+const fmt = new Intl.DateTimeFormat(undefined, {
+  weekday: "short", day: "numeric", month: "short", year: "numeric",
+  hour: "2-digit", minute: "2-digit", hourCycle: "h23",
+});
+const pad = n => String(n).padStart(2, "0");
 
-const rows = EVENTS
-  .map(([name, date]) => {
-    const [y, m, d] = date.split("-").map(Number);
-    return { name, date, days: Math.round((Date.UTC(y, m - 1, d) - today) / 86400000) };
-  })
-  .filter(e => e.days >= 0)
-  .sort((a, b) => a.days - b.days);
+const items = EVENTS
+  .map(([name, when]) => ({ name, at: parse(when) }))
+  .sort((a, b) => a.at - b.at);
 
 const list = document.getElementById("list");
-for (const e of rows) {
-  const tr = list.insertRow();
-  const name = tr.insertCell();
+for (const e of items) {
+  e.row = list.insertRow();
+  const name = e.row.insertCell();
   name.textContent = e.name;
   const date = document.createElement("span");
   date.className = "date";
-  date.textContent = e.date;
+  date.textContent = fmt.format(e.at);
   name.append(date);
-  const days = tr.insertCell();
-  days.className = "days";
-  days.textContent = e.days === 0 ? "today" : e.days === 1 ? "1 day" : e.days + " days";
+  e.left = e.row.insertCell();
+  e.left.className = "days";
 }
-if (!rows.length) list.insertRow().insertCell().textContent = "Nothing coming up.";
+
+function tick() {
+  let shown = 0;
+  for (const e of items) {
+    const s = Math.floor((e.at - Date.now()) / 1000);
+    e.row.hidden = s < 0;
+    if (s < 0) continue;
+    shown++;
+    const d = Math.floor(s / 86400);
+    e.left.textContent = (d ? d + "d " : "") +
+      pad(Math.floor(s / 3600) % 24) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+  }
+  document.getElementById("empty").hidden = shown > 0;
+}
+tick();
+setInterval(tick, 1000);
 </script>
 </body>
 </html>
